@@ -6,7 +6,7 @@ on:
         type: choice
         description: "配置文件"
         required: true
-        default: oneplus_ace2pro_v
+        default: oneplus_13
         options:
           - oneplus_nord_ce4_v
           - oneplus_ace_3v_v
@@ -51,7 +51,7 @@ on:
         type: string
         description: "自定义内核后缀 (留空则使用随机字符串)"
         required: false
-        default: ""
+        default: "-android15-8-g013ec21bba94-abogki383916444-4k"
       FAST_BUILD:
         type: boolean
         description: "是否启用极速构建？"
@@ -71,12 +71,12 @@ on:
         type: boolean
         description: "是否添加风驰驱动？"
         required: true
-        default: false
+        default: true
       ZRAM:
         type: boolean
         description: "是否添加更多的ZRAM算法？"
         required: true
-        default: false
+        default: true
 
 jobs:
   get-config:
@@ -215,34 +215,11 @@ jobs:
           git commit -m "Updated kernel version suffix"
 
       # 自动生成随机后缀（仅在 SUFFIX 未设置时生效）*
-      - name: Generate random kernel suffix if SUFFIX is empty
-        if: ${{ github.event.inputs.SUFFIX == '' }}
+      - name: Add make name
         run: |
-          cd kernel_workspace
-          ANDROID_VERSION="${{ needs.get-config.outputs.ANDROID_VERSION }}"
-          FAST_BUILD="${{ github.event.inputs.FAST_BUILD }}"
-
-          RANDOM_DIGIT=$(od -An -N1 -tu1 < /dev/urandom | tr -d '[:space:]' | awk '{print $1 % 11}')
-          RANDOM_HASH=$(od -An -N7 -tx1 /dev/urandom | tr -d ' \n')
-          RANDOM_SUFFIX="${RANDOM_DIGIT}-o-g${RANDOM_HASH}"
-
-          for path in \
-            kernel_platform/common/scripts/setlocalversion \
-            kernel_platform/msm-kernel/scripts/setlocalversion \
-            kernel_platform/external/dtc/scripts/setlocalversion; do
-
-            [ -f "$path" ] || continue
-
-            if [ "$FAST_BUILD" = "true" ]; then
-              sed -i "s/^res=.*/res=\"-${ANDROID_VERSION}-${RANDOM_SUFFIX}\"/" "$path"
-            else
-              sed -i '/^res=/a res=$(echo "$res" | sed -E '\''s/(-[0-9]+-o-)?-g[0-9a-f]{7,}//'\'')' "$path"
-              sed -i "\$s|echo \"\\\$res\"|echo \"\$res-${RANDOM_SUFFIX}\"|" "$path"
-            fi
-          done
-
-          git add -A
-          git commit -m "Fix: inject random kernel suffix"
+         cd kernel_workspace/kernel_platform
+         sed -i 's/${scm_version}//' ./common/scripts/setlocalversion
+         sudo sed -i 's/-4k/${{ github.event.inputs.SUFFIX }}/g' ./common/arch/arm64/configs/gki_defconfig
 
       # 添加 SukiSU Ultra
       - name: Add KernelSU-SukiSU Ultra
@@ -451,7 +428,7 @@ jobs:
           MAKE_ARGS="LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=clang \
             RUSTC=../../prebuilts/rust/linux-x86/1.73.0b/bin/rustc \
             PAHOLE=../../prebuilts/kernel-build-tools/linux-x86/bin/pahole \
-            LD=ld.lld HOSTLD=ld.lld KCFLAGS+=-Wno-error"
+            LD=ld.lld HOSTLD=ld.lld KCFLAGS+=-O2"
           # 如果是 5.10，添加 LLVM_IAS=1
           if [[ "$KERNEL_VERSION" == "5.10" ]]; then
             MAKE_ARGS="LLVM_IAS=1 $MAKE_ARGS"
