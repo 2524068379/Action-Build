@@ -202,7 +202,7 @@ jobs:
               sed -i "s/^res=.*/res=\"-${ANDROID_VERSION}-${SUFFIX}\"/" "$path"
             else
               # 使用官方脚本编译，当使用 build_with_bazel 时，可能受特殊符号数量限制，需要小于4
-              sed -i 's/${scm_version}//' ./common/scripts/setlocalversion
+              sed -i 's/${scm_version}//' "$path"
               sudo sed -i 's/-4k/${{ github.event.inputs.SUFFIX }}/g' "$path"
             fi
           done
