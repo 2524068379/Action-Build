@@ -53,7 +53,7 @@ on:
         type: string
         description: "自定义内核后缀 (留空则使用随机字符串)"
         required: false
-        default: "-android15-8-g013ec21bba94-abogki383916444-4k"
+        default: "8-g013ec21bba94-abogki383916444-4k"
       FAST_BUILD:
         type: boolean
         description: "是否启用极速构建？"
@@ -202,8 +202,8 @@ jobs:
               sed -i "s/^res=.*/res=\"-${ANDROID_VERSION}-${SUFFIX}\"/" "$path"
             else
               # 使用官方脚本编译，当使用 build_with_bazel 时，可能受特殊符号数量限制，需要小于4
-              sed -i 's/${scm_version}//' "$path"
-              sudo sed -i 's/-4k/${{ github.event.inputs.SUFFIX }}/g' "$path"
+              sed -i '/^res=/a res=$(echo "$res" | sed -E '\''s/(-[0-9]+-o)+-g[0-9a-f]{7,}.*$//'\'')' "$path"
+              sed -i "\$s|echo \"\\\$res\"|echo \"\$res-${SUFFIX}\"|" "$path"
             fi
           done
           git add -A
@@ -533,22 +533,6 @@ jobs:
           else
             echo "未找到 Image 文件，无法复制，构建可能失败"
             exit 1
-          fi
-
-          # 复制其它可能需要的文件（如果存在），部分 img 并不会直接安装，仅复制到 zip 供参考使用
-          if [ "${{ needs.get-config.outputs.CPU }}" = "sm8750" ] && [ "${{ github.event.inputs.FAST_BUILD }}" = "false" ]; then
-          for file in dtbo.img system_dlkm.erofs.img vendor_dlkm.img vendor_boot.img; do
-            if [ -f "$dir1$file" ]; then
-              target_name="$file"
-              # 特殊处理 system_dlkm.erofs.img 的目标名
-              if [ "$file" = "system_dlkm.erofs.img" ]; then
-                target_name="system_dlkm.img"
-              fi
-              cp "$dir1$file" "./AnyKernel3/$target_name"
-            else
-              echo "$file 不存在，跳过复制"
-            fi
-          done
           fi
 
       - name: Apply patch_linux and replace Image
