@@ -202,8 +202,8 @@ jobs:
               sed -i "s/^res=.*/res=\"-${ANDROID_VERSION}-${SUFFIX}\"/" "$path"
             else
               # 使用官方脚本编译，当使用 build_with_bazel 时，可能受特殊符号数量限制，需要小于4
-              sed -i '/^res=/a res=$(echo "$res" | sed -E '\''s/(-[0-9]+-o)+-g[0-9a-f]{7,}.*$//'\'')' "$path"
-              sed -i "\$s|echo \"\\\$res\"|echo \"\$res-${SUFFIX}\"|" "$path"
+              sed -i 's/${scm_version}//' ./common/scripts/setlocalversion
+              sudo sed -i 's/-4k/${{ github.event.inputs.SUFFIX }}/g' "$path"
             fi
           done
           git add -A
@@ -484,7 +484,7 @@ jobs:
           if [[ "${{ needs.get-config.outputs.CPU }}" == "sm8650" || "${{ needs.get-config.outputs.CPU }}" == "sm7675" ]]; then
             ./kernel_platform/build_with_bazel.py -t ${{ needs.get-config.outputs.CPUD }} ${{ github.event.inputs.BUILD_METHOD }}
           else
-            LTO=thin SYSTEM_DLKM_RE_SIGN=0 BUILD_SYSTEM_DLKM=0 KMI_SYMBOL_LIST_STRICT_MODE=0 CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3=y \
+            LTO=thin SYSTEM_DLKM_RE_SIGN=0 BUILD_SYSTEM_DLKM=0 KMI_SYMBOL_LIST_STRICT_MODE=0 CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3=y KBUILD_BUILD_TIMESTAMP="Tue Dec 17 23:36:49 UTC 2024" \
             ./kernel_platform/oplus/build/oplus_build_kernel.sh ${{ needs.get-config.outputs.CPUD }} ${{ github.event.inputs.BUILD_METHOD }}
           fi
       
