@@ -115,10 +115,10 @@ jobs:
           remove-haskell: 'true'
           remove-codeql: 'true'
 
-      - name: Create and enable 15G swap
+      - name: Create and enable 12G swap
         run: |
           sudo swapoff -a
-          sudo fallocate -l 15G /swapfile
+          sudo fallocate -l 12G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
