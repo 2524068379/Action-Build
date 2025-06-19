@@ -53,7 +53,7 @@ on:
         type: string
         description: "自定义内核后缀 (留空则使用随机字符串)"
         required: false
-        default: "8-g013ec21bba94-abogki383916444-4k"
+        default: "-8-g013ec21bba94-abogki383916444-4k"
       FAST_BUILD:
         type: boolean
         description: "是否启用极速构建？"
@@ -484,7 +484,7 @@ jobs:
           if [[ "${{ needs.get-config.outputs.CPU }}" == "sm8650" || "${{ needs.get-config.outputs.CPU }}" == "sm7675" ]]; then
             ./kernel_platform/build_with_bazel.py -t ${{ needs.get-config.outputs.CPUD }} ${{ github.event.inputs.BUILD_METHOD }}
           else
-            LTO=thin SYSTEM_DLKM_RE_SIGN=0 BUILD_SYSTEM_DLKM=0 KMI_SYMBOL_LIST_STRICT_MODE=0 CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3=y KBUILD_BUILD_TIMESTAMP="Tue Dec 17 23:36:49 UTC 2024" \
+            LTO=thin SYSTEM_DLKM_RE_SIGN=0 BUILD_SYSTEM_DLKM=0 KMI_SYMBOL_LIST_STRICT_MODE=0 CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3=y \
             ./kernel_platform/oplus/build/oplus_build_kernel.sh ${{ needs.get-config.outputs.CPUD }} ${{ github.event.inputs.BUILD_METHOD }}
           fi
       
