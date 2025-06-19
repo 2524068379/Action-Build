@@ -90,7 +90,7 @@ jobs:
   build:
     needs: get-config
     name: ${{ github.event.inputs.FAST_BUILD == 'true' && ' [FAST]' || '' }}${{ github.event.inputs.SCHED == 'true' && ' [SCHED]' || '' }}${{ github.event.inputs.ZRAM == 'true' && ' [ZRAM]' || '' }}For ${{ github.event.inputs.FEIL }} ${{ github.event.inputs.BUILD_METHOD }} ${{ github.event.inputs.SUFFIX }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       CPU: ${{ needs.get-config.outputs.CPU }}
       CPUD: ${{ needs.get-config.outputs.CPUD }}
