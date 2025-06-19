@@ -90,7 +90,7 @@ jobs:
   build:
     needs: get-config
     name: ${{ github.event.inputs.FAST_BUILD == 'true' && ' [FAST]' || '' }}${{ github.event.inputs.SCHED == 'true' && ' [SCHED]' || '' }}${{ github.event.inputs.ZRAM == 'true' && ' [ZRAM]' || '' }}For ${{ github.event.inputs.FEIL }} ${{ github.event.inputs.BUILD_METHOD }} ${{ github.event.inputs.SUFFIX }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       CPU: ${{ needs.get-config.outputs.CPU }}
       CPUD: ${{ needs.get-config.outputs.CPUD }}
@@ -108,17 +108,17 @@ jobs:
       - name: Maximize build space
         uses: easimon/maximize-build-space@master
         with:
-          root-reserve-mb: 8192
-          temp-reserve-mb: 2048
+          root-reserve-mb: 38912
+          temp-reserve-mb: 4096
           remove-dotnet: 'true'
           remove-android: 'true'
           remove-haskell: 'true'
           remove-codeql: 'true'
 
-      - name: Create and enable 6G swap
+      - name: Create and enable 15G swap
         run: |
           sudo swapoff -a
-          sudo fallocate -l 6G /swapfile
+          sudo fallocate -l 15G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
