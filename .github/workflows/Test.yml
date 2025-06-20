@@ -387,12 +387,11 @@ jobs:
           # BBR配置*
           echo "CONFIG_TCP_CONG_ADVANCED=y" >> "$CONFIG_FILE"
           echo "CONFIG_TCP_CONG_BBR=y" >> "$CONFIG_FILE"
-          #echo "CONFIG_NET_SCH_FQ=y" >> "$CONFIG_FILE"
+          echo "CONFIG_DEFAULT_TCP_CONG=bbr" >> "$CONFIG_FILE"
           echo "CONFIG_TCP_CONG_BIC=n" >> "$CONFIG_FILE"
           echo "CONFIG_TCP_CONG_WESTWOOD=n" >> "$CONFIG_FILE"
           echo "CONFIG_TCP_CONG_HTCP=n" >> "$CONFIG_FILE"
           # Add CAKE
-          echo "CONFIG_DEFAULT_TCP_CONG=bbr" >> "$CONFIG_FILE"
           echo "CONFIG_DEFAULT_PFIFO_FAST=n" >> "$CONFIG_FILE"
           echo "CONFIG_NET_SCH_CAKE=y" >> "$CONFIG_FILE"
           echo "CONFIG_DEFAULT_CAKE=y" >> "$CONFIG_FILE"
@@ -469,7 +468,7 @@ jobs:
           MAKE_ARGS="LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=clang \
             RUSTC=../../prebuilts/rust/linux-x86/1.73.0b/bin/rustc \
             PAHOLE=../../prebuilts/kernel-build-tools/linux-x86/bin/pahole \
-            LD=ld.lld HOSTLD=ld.lld KCFLAGS+=-Wno-error"
+            LD=ld.lld HOSTLD=ld.lld KCFLAGS+=-o2"
           # 如果是 5.10，添加 LLVM_IAS=1
           if [[ "$KERNEL_VERSION" == "5.10" ]]; then
             MAKE_ARGS="LLVM_IAS=1 $MAKE_ARGS"
