@@ -78,7 +78,7 @@ on:
         type: boolean
         description: "是否添加更多的ZRAM算法？"
         required: true
-        default: false
+        default: true
 
 jobs:
   get-config:
@@ -267,12 +267,9 @@ jobs:
           cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
 
           if [ "${{ github.event.inputs.ZRAM }}" = "true" ]; then
-          echo "正在打zram补丁"
-          cp -r ../SukiSU_patch/other/zram/lz4k/include/linux/* ./common/include/linux
-          cp -r ../SukiSU_patch/other/zram/lz4k/lib/* ./common/lib
-          cp -r ../SukiSU_patch/other/zram/lz4k/crypto/* ./common/crypto
-          cp -r ../SukiSU_patch/other/zram/lz4k_oplus ./common/lib/
-          echo "zram_patch完成"
+            cp ../kernel_patches/001-lz4.patch ./common/
+            cp ../kernel_patches/lz4armv8.S ./common/lib
+            cp ../kernel_patches/002-zstd.patch ./common/
           fi
 
           cd ./common
@@ -301,6 +298,11 @@ jobs:
             fi
           fi
           patch -p1 < 50_add_susfs_in_gki-${{ needs.get-config.outputs.ANDROID_VERSION }}-${{ needs.get-config.outputs.KERNEL_VERSION }}.patch || true
+          
+          if [ "${{ github.event.inputs.ZRAM }}" = "true" ]; then
+           git apply -p1 < 001-lz4.patch || true
+           patch -p1 < 002-zstd.patch || true
+          fi
           echo "susfs_patch完成"
 
       - name: Apply Hide Stuff Patches
@@ -404,10 +406,8 @@ jobs:
           if [ "${{ github.event.inputs.ZRAM }}" = "true" ]; then
             echo "CONFIG_CRYPTO_LZ4HC=y" >> "$CONFIG_FILE"
             echo "CONFIG_CRYPTO_LZ4K=y" >> "$CONFIG_FILE"
-            echo "CONFIG_CRYPTO_LZ4KD=y" >> "$CONFIG_FILE"
             echo "CONFIG_CRYPTO_842=y" >> "$CONFIG_FILE"
-            echo "CONFIG_CRYPTO_LZ4K_OPLUS=y" >> "$CONFIG_FILE"
-            echo "CONFIG_ZRAM_WRITEBACK=y" >> "$CONFIG_FILE"
+            echo "CONFIG_LOCALVERSION_AUTO=n" >> "$CONFIG_FILE"
           fi
           # Remove check_defconfig
           sed -i 's/check_defconfig//' ./common/build.config.gki
