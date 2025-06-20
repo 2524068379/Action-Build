@@ -150,15 +150,6 @@ jobs:
           sudo apt update && sudo apt upgrade -y
           sudo apt install -y python3 git curl ccache
 
-      - name: Restore ccache
-        uses: actions/cache@v3
-        id: restore-ccache
-        with:
-          path: /home/runner/.ccache
-          key: ccache-${{ runner.os }}-${{ hashFiles('kernel_workspace/kernel_platform/common/build.config.gki', 'kernel_workspace/kernel_platform/common/Makefile') }}
-          restore-keys: |
-            ccache-${{ runner.os }}-
-
       - name: Install repo tool
         run: |
           curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
@@ -489,11 +480,6 @@ jobs:
       - name: Fallback Build Kernel
         if: ${{ github.event.inputs.FAST_BUILD == 'false' }}
         run: |
-          # 确保ccache在PATH首位
-          export PATH="/usr/lib/ccache:$PATH"
-          # 打印ccache状态
-          echo "=== CCACHE BEFORE BUILD ==="
-          ccache -s
           cd kernel_workspace
           if [[ "${{ needs.get-config.outputs.CPU }}" == "sm8650" || "${{ needs.get-config.outputs.CPU }}" == "sm7675" ]]; then
             ./kernel_platform/build_with_bazel.py -t ${{ needs.get-config.outputs.CPUD }} ${{ github.event.inputs.BUILD_METHOD }}
@@ -502,12 +488,6 @@ jobs:
             ./kernel_platform/oplus/build/oplus_build_kernel.sh ${{ needs.get-config.outputs.CPUD }} ${{ github.event.inputs.BUILD_METHOD }}
           fi
       
-      - name: Save ccache
-        if: always()
-        uses: actions/cache@v3
-        with:
-          path: /home/runner/.ccache
-          key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
   
       - name: Make AnyKernel3
         run: |
