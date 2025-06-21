@@ -306,8 +306,6 @@ jobs:
           fi
           patch -p1 < 50_add_susfs_in_gki-${{ needs.get-config.outputs.ANDROID_VERSION }}-${{ needs.get-config.outputs.KERNEL_VERSION }}.patch || true
           echo "susfs_patch完成"
-          cp ../../SukiSU_patch/hooks/syscall_hooks.patch ./
-          patch -p1 -F 3 < syscall_hooks.patch
           if [ "${{ github.event.inputs.enable_feature_y }}" = "true" ]; then
            git apply -p1 < 001-lz4.patch || true
            patch -p1 < 002-zstd.patch || true
