@@ -41,15 +41,6 @@ on:
         options:
           - gki
           - perf
-      SUSFS_CI:
-        type: choice
-        description: "下载SUSFS模块调用方式"
-        required: true
-        default: CI
-        options:
-          - CI
-          - Release
-          - NoN
       SUFFIX:
         type: string
         description: "自定义内核后缀 (留空则使用随机字符串)"
@@ -271,6 +262,8 @@ jobs:
           cd kernel_workspace
           git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ needs.get-config.outputs.ANDROID_VERSION }}-${{ needs.get-config.outputs.KERNEL_VERSION }}
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
+          git clone https://github.com/Xiaomichael/kernel_patches.git
+          
           cd kernel_platform
           echo "正在打susfs补丁"
           cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ needs.get-config.outputs.ANDROID_VERSION }}-${{ needs.get-config.outputs.KERNEL_VERSION }}.patch ./common/
@@ -279,14 +272,14 @@ jobs:
 
           if [ "${{ github.event.inputs.ZRAM }}" = "true" ]; then
           echo "正在打zram补丁"
-          cp -r ../SukiSU_patch/other/zram/lz4k/include/linux/* ./common/include/linux
-          cp -r ../SukiSU_patch/other/zram/lz4k/lib/* ./common/lib
-          cp -r ../SukiSU_patch/other/zram/lz4k/crypto/* ./common/crypto
-          cp -r ../SukiSU_patch/other/zram/lz4k_oplus ./common/lib/
+          cp ../kernel_patches/001-lz4.patch ./common/
+          cp ../kernel_patches/lz4armv8.S ./common/lib
+          cp ../kernel_patches/002-zstd.patch ./common/
           echo "zram_patch完成"
           fi
 
           cd ./common
+          
           GKI_V="${{ needs.get-config.outputs.ANDROID_VERSION }}-${{ needs.get-config.outputs.KERNEL_VERSION }}"
           SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | head -n1 | cut -d= -f2 | tr -d ' ')
 
@@ -313,6 +306,13 @@ jobs:
           fi
           patch -p1 < 50_add_susfs_in_gki-${{ needs.get-config.outputs.ANDROID_VERSION }}-${{ needs.get-config.outputs.KERNEL_VERSION }}.patch || true
           echo "susfs_patch完成"
+          cp ../../SukiSU_patch/hooks/syscall_hooks.patch ./
+          patch -p1 -F 3 < syscall_hooks.patch
+          if [ "${{ github.event.inputs.enable_feature_y }}" = "true" ]; then
+           git apply -p1 < 001-lz4.patch || true
+           patch -p1 < 002-zstd.patch || true
+          fi
+          echo "完成"
 
       - name: Apply Hide Stuff Patches
         run: |
@@ -342,19 +342,6 @@ jobs:
             patch -p1 -F 3 < syscall_hooks.patch
             echo "vfs_patch完成"
 
-      - name: Apply ZRAM
-        if: ${{ github.event.inputs.ZRAM == 'true' }}
-        run: |
-          cd kernel_workspace/kernel_platform/common
-            cp ../../SukiSU_patch/other/zram/zram_patch/${{ needs.get-config.outputs.KERNEL_VERSION }}/lz4kd.patch ./
-            echo "正在打lz4kd补丁"
-            patch -p1 -F 3 < lz4kd.patch || true
-            echo 'lz4kd_patch完成'
-            cp ../../SukiSU_patch/other/zram/zram_patch/${{ needs.get-config.outputs.KERNEL_VERSION }}/lz4k_oplus.patch ./
-            echo "正在打lz4k_oplus补丁"
-            patch -p1 -F 3 < lz4k_oplus.patch || true
-            echo 'lz4k_oplus_patch完成'
-
       # 配置信息
       - name: Add Configuration Settings
         run: |
@@ -378,7 +365,7 @@ jobs:
           if [ "${{ github.event.inputs.VFS }}" = "true" ]; then
             echo "CONFIG_KSU_SUSFS=y" >> "$CONFIG_FILE"
             echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> "$CONFIG_FILE"
+            echo "CONFIG_KSU_SUSFS_SUS_PATH=n" >> "$CONFIG_FILE"
             echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> "$CONFIG_FILE"
             echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y" >> "$CONFIG_FILE"
             echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y" >> "$CONFIG_FILE"
@@ -413,11 +400,12 @@ jobs:
           # LZ4KD配置*
           if [ "${{ github.event.inputs.ZRAM }}" = "true" ]; then
             echo "CONFIG_CRYPTO_LZ4HC=y" >> "$CONFIG_FILE"
+            echo "CONFIG_CRYPTO_LZ4=y" >> "$CONFIG_FILE"
             echo "CONFIG_CRYPTO_LZ4K=y" >> "$CONFIG_FILE"
-            echo "CONFIG_CRYPTO_LZ4KD=y" >> "$CONFIG_FILE"
             echo "CONFIG_CRYPTO_842=y" >> "$CONFIG_FILE"
             echo "CONFIG_CRYPTO_LZ4K_OPLUS=y" >> "$CONFIG_FILE"
             echo "CONFIG_ZRAM_WRITEBACK=y" >> "$CONFIG_FILE"
+            echo "CONFIG_LOCALVERSION_AUTO=n" >> "$CONFIG_FILE"
           fi
           # Remove check_defconfig
           sed -i 's/check_defconfig//' ./common/build.config.gki
