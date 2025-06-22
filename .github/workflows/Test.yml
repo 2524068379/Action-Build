@@ -60,7 +60,7 @@ on:
         type: boolean
         description: "是否启用内核模块(KPM)？"
         required: true
-        default: false
+        default: true
       SCHED:
         type: boolean
         description: "是否添加风驰驱动？"
@@ -263,20 +263,12 @@ jobs:
           cd kernel_workspace
           git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ needs.get-config.outputs.ANDROID_VERSION }}-${{ needs.get-config.outputs.KERNEL_VERSION }}
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
-          git clone https://github.com/Xiaomichael/kernel_patches.git
           
           cd kernel_platform
           echo "正在打susfs补丁"
           cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ needs.get-config.outputs.ANDROID_VERSION }}-${{ needs.get-config.outputs.KERNEL_VERSION }}.patch ./common/
           cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
           cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
-
-          if [ "${{ github.event.inputs.ZRAM }}" = "true" ]; then
-          echo "正在打zram补丁"
-          cp ../kernel_patches/001-lz4.patch ./common/
-          cp ../kernel_patches/lz4armv8.S ./common/lib
-          cp ../kernel_patches/002-zstd.patch ./common/
-          fi
 
           cd ./common
           GKI_V="${{ needs.get-config.outputs.ANDROID_VERSION }}-${{ needs.get-config.outputs.KERNEL_VERSION }}"
@@ -305,11 +297,6 @@ jobs:
           fi
           patch -p1 < 50_add_susfs_in_gki-${{ needs.get-config.outputs.ANDROID_VERSION }}-${{ needs.get-config.outputs.KERNEL_VERSION }}.patch || true
           echo "susfs_patch完成"
-          if [ "${{ github.event.inputs.enable_feature_y }}" = "true" ]; then
-           git apply -p1 < 001-lz4.patch || true
-           patch -p1 < 002-zstd.patch || true
-          fi
-          echo "完成"
 
       - name: Apply Hide Stuff Patches
         run: |
@@ -338,7 +325,28 @@ jobs:
             echo "正在打vfs补丁"
             patch -p1 -F 3 < syscall_hooks.patch
             echo "vfs_patch完成"
-
+      
+      - name: 🔧 Update compression algorithms (更新压缩算法)
+        run: |
+          cd kernel_workspace/kernel_platform/common
+          
+          # 更新LZ4实现
+          curl -sSLO https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/lib/lz4/lz4_decompress.c
+          curl -sSLO https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/lib/lz4/lz4defs.h
+          curl -sSLO https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/lib/lz4/lz4_compress.c
+          curl -sSLO https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/lib/lz4/lz4hc_compress.c
+          
+          # 更新Zstd实现
+          zstd_base="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/lib/zstd"
+          mkdir -p lib/zstd && cd lib/zstd
+          curl -sSL $zstd_base/zstd_common_module.c -o common.c
+          curl -sSL $zstd_base/compress/zstd_compress_module.c -o compress.c
+          curl -sSL $zstd_base/decompress/zstd_decompress_module.c -o decompress.c
+          curl -sSL $zstd_base/zstd_compat.h -o compat.h
+          
+          cd ../../..
+          echo "✅ LZ4/Zstd 算法更新完成"
+      
       # 配置信息
       - name: Add Configuration Settings
         run: |
@@ -398,11 +406,12 @@ jobs:
           if [ "${{ github.event.inputs.ZRAM }}" = "true" ]; then
             echo "CONFIG_CRYPTO_LZ4HC=y" >> "$CONFIG_FILE"
             echo "CONFIG_CRYPTO_LZ4=y" >> "$CONFIG_FILE"
-            echo "CONFIG_CRYPTO_LZ4K=y" >> "$CONFIG_FILE"
-            echo "CONFIG_CRYPTO_842=y" >> "$CONFIG_FILE"
-            echo "CONFIG_CRYPTO_LZ4K_OPLUS=y" >> "$CONFIG_FILE"
-            echo "CONFIG_ZRAM_WRITEBACK=y" >> "$CONFIG_FILE"
-            echo "CONFIG_LOCALVERSION_AUTO=n" >> "$CONFIG_FILE"
+            echo "CONFIG_CRYPTO_ZSTD=y" >> "$CONFIG_FILE"
+            echo "CONFIG_F2FS_FS_COMPRESSION=y" >> "$CONFIG_FILE"
+            echo "CONFIG_F2FS_FS_LZ4=y" >> "$CONFIG_FILE"
+            echo "CONFIG_F2FS_FS_LZ4HC=y" >> "$CONFIG_FILE"
+            echo "CONFIG_F2FS_FS_ZSTD=y" >> "$CONFIG_FILE"
+            echo "CONFIG_KERNEL_LZ4=y" >> "$CONFIG_FILE"
           fi
           # 移除构建校验
           sed -i 's/check_defconfig//' ./common/build.config.gki
